@@ -23,6 +23,7 @@
         path (if (clojure.string/blank? path) "_index.htm" path)
         ct (get-content-type path)]
     (-> (response (.getInputStream zip (.getEntry zip path)))
+        (header "Cache-Control" "max-age=3600")
         (content-type (str ct "; charset=utf-8")))))
 
 (defn upload-saz [request]
