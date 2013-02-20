@@ -20,7 +20,7 @@
 
 (defn get-file [trace path]
   (let [zip (@traces trace)
-        path (if (clojure.string/blank? path) "_index.htm" path)
+        path (if (clojure.string/blank? path) "_index.htm" (clojure.string/replace path #"\\" "/"))
         ct (get-content-type path)]
     (-> (response (.getInputStream zip (.getEntry zip path)))
         (header "Cache-Control" "max-age=3600")
