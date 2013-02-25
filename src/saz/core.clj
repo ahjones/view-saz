@@ -12,11 +12,11 @@
   (:gen-class))
 
 (def traces (atom {}))
-(def store-path (file (env :store-path)))
+(def store-dir (file (env :store-path)))
 
 (defn create-zip-file
   []
-  (java.io.File/createTempFile "saz" "" store-path))
+  (java.io.File/createTempFile "saz" "" store-dir))
 
 (defn- get-content-type [path]
   (condp re-find path
@@ -30,7 +30,7 @@
         path (if (clojure.string/blank? path) "_index.htm" (clojure.string/replace path #"\\" "/"))
         ct (get-content-type path)]
     (-> (response (.getInputStream zip (.getEntry zip path)))
-        (header "Cache-Control" "max-age=3600")
+        (header "Cache-Control" "max-age=36000")
         (content-type (str ct "; charset=utf-8")))))
 
 (defn upload-saz [request]
@@ -55,6 +55,18 @@
   (GET "/" request (-> (response page) (content-type "text/html; charset=utf-8")))
   (GET "/files/:trace/*" [trace *] (get-file trace *))
   (POST "/files" request (upload-saz request)))
+
+(defn write-db
+  [k r old new]
+  (spit (str (env :store-path) "/index.db") (pr-str new)))
+
+(defn init
+  []
+  (try
+    (let [dbfile (read-string (slurp (str (env :store-path) "/index.db")))]
+      (swap! traces merge dbfile))
+    (catch Exception e))
+  (add-watch traces :key write-db))
 
 (def app (-> routes
              handler/site))

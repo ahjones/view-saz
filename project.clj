@@ -10,5 +10,6 @@
             [environ/environ.lein "0.3.0"]]
   :hooks [environ.leiningen.hooks]
   :env {:store-path "/tmp"}
-  :ring {:handler saz.core/app}
+  :ring {:handler saz.core/app
+         :init saz.core/init}
   :main saz.core)
