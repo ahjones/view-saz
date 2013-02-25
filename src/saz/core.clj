@@ -4,12 +4,19 @@
             [compojure.handler :as handler]
             [ring.util.response :refer [response content-type status header]]
             [hiccup.core :as html]
-            [hiccup.page :refer [html5]])
+            [hiccup.page :refer [html5]]
+            [environ.core :refer [env]]
+            [clojure.java.io :refer [file copy]])
   (:import [java.util.zip ZipFile]
            [java.util UUID])
   (:gen-class))
 
 (def traces (atom {}))
+(def store-path (file (env :store-path)))
+
+(defn create-zip-file
+  []
+  (java.io.File/createTempFile "saz" "" store-path))
 
 (defn- get-content-type [path]
   (condp re-find path
@@ -19,7 +26,7 @@
     "text/plain"))
 
 (defn get-file [trace path]
-  (let [zip (@traces trace)
+  (let [zip (ZipFile. (file (@traces trace)))
         path (if (clojure.string/blank? path) "_index.htm" (clojure.string/replace path #"\\" "/"))
         ct (get-content-type path)]
     (-> (response (.getInputStream zip (.getEntry zip path)))
@@ -28,9 +35,10 @@
 
 (defn upload-saz [request]
   (let [tempfile (get-in request [:params :trace :tempfile])
-        zip (ZipFile. tempfile)
+        outfile (create-zip-file)
         id (str (UUID/randomUUID))]
-    (swap! traces assoc id zip)
+    (copy tempfile outfile)
+    (swap! traces assoc id (.getCanonicalPath outfile))
     (-> (response "")
         (status 303)
         (header "Location" (str "/files/" id "/")))))
